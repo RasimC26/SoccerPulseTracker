@@ -50,8 +50,10 @@ for minute in range(1, 91):
         chart_placeholder.plotly_chart(fig, use_container_width=True)
 
     # Update Sidebar in its placeholder
-    with keyword_placeholder:
-        st.write("### Current Stats")
-        st.code("GOAL\nVAR\nOFFSIDE\nREF!!" if minute == 34 else "Pass\nDefense\nCorner")
+    with keyword_placeholder.container():
+
+        st.write("### Trending Terms")
+        trending = ["Haaland", "VAR", "Offside", "Ref", "Bangers Only"]
+        st.pills("", trending, selection_mode="multi", disabled=True, key=f"pills_{minute}")
 
     time.sleep(1)
