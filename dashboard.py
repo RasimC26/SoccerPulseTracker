@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import time
 from datetime import datetime
+import plotly.express as px
 
 # Sets up the browser tab and layout
 st.set_page_config(page_title="Soccer Pulse Tracker", layout="wide")
@@ -23,7 +24,7 @@ if 'buzz_data' not in st.session_state:
 # The live loop: This simulates a real-time data stream
 for minute in range(1, 91):
     new_buzz = np.random.randint(10, 50) 
-    
+
     # Append new data to our state
     new_row = pd.DataFrame({'Minute': [minute], 'Buzz': [new_buzz]})
     st.session_state.buzz_data = pd.concat([st.session_state.buzz_data, new_row], ignore_index=True)
@@ -42,7 +43,11 @@ for minute in range(1, 91):
 
     # Update Chart in its placeholder
     with chart_placeholder:
-        st.line_chart(st.session_state.buzz_data.set_index('Minute'))
+        fig = px.area(st.session_state.buzz_data, x='Minute', y='Buzz', 
+             title="Match Momentum Pulse",
+             color_discrete_sequence=['#ff4b4b']) 
+        fig.update_layout(xaxis_title="Match Minute", yaxis_title="Social Volume")
+        chart_placeholder.plotly_chart(fig, use_container_width=True)
 
     # Update Sidebar in its placeholder
     with keyword_placeholder:
