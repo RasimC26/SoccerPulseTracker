@@ -23,7 +23,9 @@ def main():
     s.send(f"NICK {NICK}\r\n".encode("utf-8"))
     s.send(f"JOIN {CHAN}\r\n".encode("utf-8"))
 
-    print(f"Connected to {CHAN}. Listening...")
+    print(f"Connected to {CHAN}. . Ready to track.")
+    input("PRESS ENTER WHEN THE GAME STARTS") 
+    match_start_time = time.time()
 
     s.recv(2048)
 
