@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import time
 from datetime import datetime
+from streamlit_autorefresh import st_autorefresh
 import plotly.express as px
 
 # Sets up the browser tab and layout
@@ -10,50 +11,54 @@ st.set_page_config(page_title="Soccer Pulse Tracker", layout="wide")
 
 st.title("Live Match Pulse Tracker")
 
+# Auto refresh every 10 seconds, need to replace in future due to frustrating position reset
+st_autorefresh(interval=10000, key="refresh")
+
 # These are empty slots on the website we will fill with data
 metric_placeholder = st.empty()
 chart_placeholder = st.empty()
 keyword_placeholder = st.sidebar.empty()
 
-# MOCK DATA INITIALIZATION
-# We start with an empty DataFrame to hold our "Pulse" scores
-if 'buzz_data' not in st.session_state:
-    st.session_state.buzz_data = pd.DataFrame(columns=['Minute', 'Buzz'])
+
+def get_real_data():
+    try:
+        df = pd.read_csv('pulse_data.csv')
+        df.columns = ['Minute', 'Buzz'] 
+        return df
+    except Exception as e:
+        # Returns an empty dataframe if the file isn't ready yet
+        return pd.DataFrame(columns=['Minute', 'Buzz'])
 
 
-# The live loop: This simulates a real-time data stream
-for minute in range(1, 91):
-    new_buzz = np.random.randint(10, 50) 
+df = get_real_data()
 
-    # Append new data to our state
-    new_row = pd.DataFrame({'Minute': [minute], 'Buzz': [new_buzz]})
-    st.session_state.buzz_data = pd.concat([st.session_state.buzz_data, new_row], ignore_index=True)
+if not df.empty and len(df) > 0:
 
-   # Update Metrics in their own locked container
+    current_minute = df['Minute'].iloc[-1]
+    current_buzz = df['Buzz'].iloc[-1]
+
+    # Update Metrics in their own locked container
     with metric_placeholder.container():
         m_col1, m_col2 = st.columns(2)
-        m_col1.metric("Current Match Minute", f"{minute}'")
-
-        if len(st.session_state.buzz_data) > 1:
-            previous_buzz = st.session_state.buzz_data['Buzz'].iloc[-2]
-            delta_value = new_buzz - previous_buzz
-        else:
-            delta_value = 0
-        m_col2.metric("Latest Buzz Score", new_buzz, delta=delta_value)
+        delta_val = int(current_buzz - df['Buzz'].iloc[-2]) if len(df) > 1 else 0
+        m_col1.metric("Match Minute", f"{current_minute}'")
+        m_col2.metric("Latest Buzz Score", current_buzz, delta=delta_val)
 
     # Update Chart in its placeholder
-    with chart_placeholder:
-        fig = px.area(st.session_state.buzz_data, x='Minute', y='Buzz', 
-             title="Match Momentum Pulse",
-             color_discrete_sequence=['#ff4b4b']) 
-        fig.update_layout(xaxis_title="Match Minute", yaxis_title="Social Volume")
-        chart_placeholder.plotly_chart(fig, use_container_width=True)
+    with chart_placeholder.container():
+        fig = px.area(df, x='Minute', y='Buzz', title="Match Momentum Pulse", color_discrete_sequence=['#ff4b4b']) 
+        fig.update_layout(xaxis_title="Match Minute", yaxis_title="Social Volume", xaxis=dict(range=[0, 95]))
+        st.plotly_chart(fig, use_container_width=True)
 
     # Update Sidebar in its placeholder
     with keyword_placeholder.container():
-
         st.write("### Trending Terms")
         trending = ["Haaland", "VAR", "Offside", "Ref", "Bangers Only"]
-        st.pills("", trending, selection_mode="multi", disabled=True, key=f"pills_{minute}")
-
-    time.sleep(1)
+        st.pills("", trending, selection_mode="multi", disabled=True)
+    
+else:
+    # What to show while waiting for the first minute of data
+    with metric_placeholder.container():
+        st.warning("Waiting for kickoff... The first data point will appear in 60 seconds.")
+    with chart_placeholder.container():
+        st.info("Check your terminal to ensure collector.py is running and you have pressed ENTER.")

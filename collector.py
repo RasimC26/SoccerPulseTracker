@@ -47,15 +47,19 @@ def main():
         elif "PRIVMSG" in response:
             message_count += 1 
 
-        # Check if 1 second (will change to 1 min in future) has passed
+        # Check if 1 min has passed
         current_time = time.time()
-        if current_time - last_check_time >= 1:
+        if current_time - last_check_time >= 60:
+
+            elapsed_seconds = int(current_time - match_start_time)
+            match_minute = elapsed_seconds // 60
+
             # Save the "Pulse" to our CSV
             with open('pulse_data.csv', 'a', newline='') as f:
                 writer = csv.writer(f)
-                writer.writerow([time.strftime('%H:%M:%S'), message_count])
+                writer.writerow([match_minute, message_count])
             
-            print(f"Pulse: {message_count} messages/sec") 
+            print(f"Minute {match_minute} | Pulse: {message_count} messages/min") 
             
             # Reset for the time measurement 
             message_count = 0
