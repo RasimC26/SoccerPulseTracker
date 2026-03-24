@@ -3,6 +3,8 @@ import os
 import requests
 import time
 import csv
+from collections import Counter
+import re
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -31,12 +33,16 @@ def main():
 
     # counters
     message_count = 0
+    word_counts = Counter()
     last_check_time = time.time()
+
+    # common words to filter out of word count
+    stop_words = {"the", "a", "and", "is", "in", "it", "to", "of", "i", "this", "that"}
 
     # Prepare CSV file
     with open('pulse_data.csv', 'w', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(['timestamp', 'message-count']) # Header for CSV file
+        writer.writerow(['Minute', 'Buzz', 'Trending'])# Header for CSV file
 
     while True:
         # Listens for data
@@ -47,9 +53,23 @@ def main():
         elif "PRIVMSG" in response:
             message_count += 1 
 
+            # Extract the message text
+            parts = response.split(":", 2)
+            if len(parts) > 2:
+                message_text = parts[2].lower()
+                # Clean the text (remove punctuation)
+                clean_words = re.findall(r'\b\w+\b', message_text)
+                for word in clean_words:
+                    if word not in stop_words and len(word) > 2:
+                        word_counts[word] += 1
+
         # Check if 1 min has passed
         current_time = time.time()
-        if current_time - last_check_time >= 60:
+        if current_time - last_check_time >= 60:    
+
+            # Get the top 5 most used words this minute
+            top_words = [word for word, count in word_counts.most_common(5)]
+            trending_str = ",".join(top_words)
 
             elapsed_seconds = int(current_time - match_start_time)
             match_minute = elapsed_seconds // 60
@@ -57,13 +77,14 @@ def main():
             # Save the "Pulse" to our CSV
             with open('pulse_data.csv', 'a', newline='') as f:
                 writer = csv.writer(f)
-                writer.writerow([match_minute, message_count])
+                writer.writerow([match_minute, message_count, trending_str])
             
             print(f"Minute {match_minute} | Pulse: {message_count} messages/min") 
             
-            # Reset for the time measurement 
+            # Reset for the time measurement and reset top words for that minute 
             message_count = 0
             last_check_time = current_time
+            word_counts.clear()
 
 if __name__ == "__main__":
     main()

@@ -23,11 +23,11 @@ keyword_placeholder = st.sidebar.empty()
 def get_real_data():
     try:
         df = pd.read_csv('pulse_data.csv')
-        df.columns = ['Minute', 'Buzz'] 
+        df.columns = ['Minute', 'Buzz', 'Trending'] 
         return df
     except Exception as e:
         # Returns an empty dataframe if the file isn't ready yet
-        return pd.DataFrame(columns=['Minute', 'Buzz'])
+        return pd.DataFrame(columns=['Minute', 'Buzz', 'Trending'])
 
 
 df = get_real_data()
@@ -36,6 +36,13 @@ if not df.empty and len(df) > 0:
 
     current_minute = df['Minute'].iloc[-1]
     current_buzz = df['Buzz'].iloc[-1]
+
+    # Process Trending Words
+    raw_trending = df['Trending'].iloc[-1]
+    if pd.isna(raw_trending) or raw_trending == "":
+        trending_list = ["Waiting..."]
+    else:
+        trending_list = str(raw_trending).split(",")
 
     # Update Metrics in their own locked container
     with metric_placeholder.container():
@@ -53,8 +60,7 @@ if not df.empty and len(df) > 0:
     # Update Sidebar in its placeholder
     with keyword_placeholder.container():
         st.write("### Trending Terms")
-        trending = ["Haaland", "VAR", "Offside", "Ref", "Bangers Only"]
-        st.pills("", trending, selection_mode="multi", disabled=True)
+        st.pills("", trending_list, selection_mode="multi", disabled=True)
     
 else:
     # What to show while waiting for the first minute of data
