@@ -37,7 +37,10 @@ def main():
     last_check_time = time.time()
 
     # common words to filter out of word count
-    stop_words = {"the", "a", "and", "is", "in", "it", "to", "of", "i", "this", "that"}
+    stop_words = {"the", "a", "and", "is", "in", "it", "to", "of", "i", "this", "that", "all", "you"}
+
+    # bots to filter out
+    bot_blocklist = {"streamelements", "nightbot", "moobot", "caseoh_bot"}
 
     # Prepare CSV file
     with open('pulse_data.csv', 'w', newline='') as f:
@@ -51,17 +54,24 @@ def main():
         if response.startswith("PING"):
             s.send("PONG :tmi.twitch.tv\r\n".encode("utf-8"))
         elif "PRIVMSG" in response:
-            message_count += 1 
+            try:
+                user_part = response.split("!")[0] # Gets username and removes colon and makes it lowercase 
+                username = user_part[1:].lower()   
+            except:
+                username = "unknown"
 
-            # Extract the message text
-            parts = response.split(":", 2)
-            if len(parts) > 2:
-                message_text = parts[2].lower()
-                # Clean the text (remove punctuation)
-                clean_words = re.findall(r'\b\w+\b', message_text)
-                for word in clean_words:
-                    if word not in stop_words and len(word) > 2:
-                        word_counts[word] += 1
+            if username not in bot_blocklist:    
+                message_count += 1 
+
+                # Extract the message text
+                parts = response.split(":", 2)
+                if len(parts) > 2:
+                    message_text = parts[2].lower()
+                    # Clean the text (remove punctuation)
+                    clean_words = re.findall(r'\b\w+\b', message_text)
+                    for word in clean_words:
+                        if word not in stop_words and len(word) > 2:
+                            word_counts[word] += 1
 
         # Check if 1 min has passed
         current_time = time.time()

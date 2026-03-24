@@ -12,7 +12,7 @@ st.set_page_config(page_title="Soccer Pulse Tracker", layout="wide")
 st.title("Live Match Pulse Tracker")
 
 # Auto refresh every 10 seconds, need to replace in future due to frustrating position reset
-st_autorefresh(interval=10000, key="refresh")
+st_autorefresh(interval=60000, key="refresh")
 
 # These are empty slots on the website we will fill with data
 metric_placeholder = st.empty()
