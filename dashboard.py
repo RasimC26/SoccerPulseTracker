@@ -59,9 +59,22 @@ if not df.empty and len(df) > 0:
 
     # Update Sidebar in its placeholder
     with keyword_placeholder.container():
-        st.write("### Trending Terms")
-        st.pills("", trending_list, selection_mode="multi", disabled=True)
-    
+        st.write("### Top 5 Trending Terms")
+        
+        # Define the ranking styles/sizes
+        rank_prefixes = ["# 1. ", "### 2. ", "#### 3. ", "##### 4. ", "###### 5. "]
+        
+        if trending_list != "Waiting...":
+            for i in range(len(trending_list)):
+                word = trending_list[i].upper()
+                
+                prefix = rank_prefixes[i]
+                
+                st.markdown(f"{prefix}{word}")
+        else:
+            st.info("Waiting for chat data...")
+            
+
 else:
     # What to show while waiting for the first minute of data
     with metric_placeholder.container():
