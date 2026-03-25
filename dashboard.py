@@ -40,25 +40,31 @@ Refreshing in ...
 
 <script>
 const lastUpdate = {last_update_time};
+let isReloading = false;
 
 function updateTimer() {{
+    if (isReloading) return;
+
     const now = Date.now() / 1000;
-    const remaining = Math.max(0, 60 - Math.floor(now - lastUpdate));
+    const elapsed = now - lastUpdate;
+    const remaining = Math.max(0, 60 - Math.floor(elapsed));
 
     document.getElementById("countdown").innerHTML =
-        "Refreshing in <b>" + remaining + "s</b>";
+        "Next Refresh in <b>" + remaining + "s</b>";
+
+    if (remaining <= 0 && !isReloading) {{
+        isReloading = true;
+        document.getElementById("countdown").innerHTML = "<b>Syncing Data...</b>";
+        setTimeout(() => {{
+            window.parent.location.reload();
+        }}, 1000); // small delay to show "Syncing Data..."
+    }}
 }}
 
 setInterval(updateTimer, 1000);
 updateTimer();
 </script>
 """, height=40)
-    
-
-# -------------------------------
-# Auto-refresh the page every 60 seconds
-# -------------------------------
-st_autorefresh(interval=60000, key="refresh")
 
 # -------------------------------
 # Placeholders for dynamic content
