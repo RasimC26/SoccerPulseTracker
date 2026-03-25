@@ -34,7 +34,7 @@ def main():
     # counters
     message_count = 0
     word_counts = Counter()
-    last_check_time = time.time()
+    last_check_time = match_start_time
 
     # common words to filter out of word count
     stop_words = {"the", "a", "and", "is", "in", "it", "to", "of", "i", "this", "that", "all", "you"}
@@ -45,7 +45,7 @@ def main():
     # Prepare CSV file
     with open('pulse_data.csv', 'w', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(['Minute', 'Buzz', 'Trending'])# Header for CSV file
+        writer.writerow(['Minute', 'Buzz', 'Trending', 'Timestamp'])# Header for CSV file
 
     while True:
         # Listens for data
@@ -87,7 +87,7 @@ def main():
             # Save the "Pulse" to our CSV
             with open('pulse_data.csv', 'a', newline='') as f:
                 writer = csv.writer(f)
-                writer.writerow([match_minute, message_count, trending_str])
+                writer.writerow([match_minute, message_count, trending_str, current_time])
             
             print(f"Minute {match_minute} | Pulse: {message_count} messages/min") 
             
