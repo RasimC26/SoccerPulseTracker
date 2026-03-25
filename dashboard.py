@@ -13,11 +13,11 @@ import streamlit.components.v1 as components
 def get_real_data():
     try:
         df = pd.read_csv('pulse_data.csv')
-        df.columns = ['Minute', 'Buzz', 'Trending', 'Timestamp'] 
+        df.columns = ['Minute', 'Buzz', 'Trending', 'Timestamp', 'Status'] 
         return df
     except Exception as e:
         # Returns an empty dataframe if the file isn't ready yet
-        return pd.DataFrame(columns=['Minute', 'Buzz', 'Trending'])
+        return pd.DataFrame(columns=['Minute', 'Buzz', 'Trending', 'Timestamp', 'Status'])
 
 # Load the latest data
 df = get_real_data()
@@ -57,7 +57,7 @@ function updateTimer() {{
         document.getElementById("countdown").innerHTML = "<b>Syncing Data...</b>";
         setTimeout(() => {{
             window.parent.location.reload();
-        }}, 1000); // small delay to show "Syncing Data..."
+        }}, 2000); // small delay to show "Syncing Data..."
     }}
 }}
 

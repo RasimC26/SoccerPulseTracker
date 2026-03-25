@@ -5,50 +5,94 @@ import time
 import csv
 from collections import Counter
 import re
+from pynput import keyboard
 from dotenv import load_dotenv
 
+# -------------------------------
+# Load environment variables
+# -------------------------------
 load_dotenv()
-
 CLIENT_ID = os.getenv("TWITCH_CLIENT_ID")
 CLIENT_SECRET = os.getenv("TWITCH_CLIENT_SECRET")
 NICK = os.getenv("TWITCH_NICK")
 CHAN = os.getenv("TWITCH_CHANNEL")
 PASS = os.getenv("TWITCH_TOKEN")
 
+# -------------------------------
+# Global pause variables and Key press callback
+# -------------------------------
+paused = False
+pause_start_time = 0
+total_pause_duration = 0
 
+def on_press(key):
+    global paused, pause_start_time, total_pause_duration
+    try:
+        if key.char == 'p':
+            if not paused:
+                paused = True
+                pause_start_time = time.time()
+                print("MATCH PAUSED")
+            else:
+                paused = False
+                total_pause_duration += time.time() - pause_start_time
+                print("MATCH RESUMED")
+    except AttributeError:
+        pass  # ignore special keys
+
+# -------------------------------
+# Main Function
+# -------------------------------
 def main():
 
-    # Connect to server and authenticate
+    # -------------------------------
+    # Connect to Twitch IRC server
+    # -------------------------------
     s = socket.socket()
     s.connect(("irc.chat.twitch.tv", 6667))
     s.send(f"PASS {PASS}\r\n".encode("utf-8"))
     s.send(f"NICK {NICK}\r\n".encode("utf-8"))
     s.send(f"JOIN {CHAN}\r\n".encode("utf-8"))
+    s.recv(2048) # Initial server message
 
     print(f"Connected to {CHAN}. . Ready to track.")
     input("PRESS ENTER WHEN THE GAME STARTS") 
     match_start_time = time.time()
 
-    s.recv(2048)
 
-    # counters
+    # -------------------------------
+    # Message counting and trending
+    # -------------------------------
     message_count = 0
     word_counts = Counter()
     last_check_time = match_start_time
 
-    # common words to filter out of word count
+    # -------------------------------
+    # Stop words and bot filter
+    # -------------------------------
     stop_words = {"the", "a", "and", "is", "in", "it", "to", "of", "i", "this", "that", "all", "you"}
-
-    # bots to filter out
     bot_blocklist = {"streamelements", "nightbot", "moobot", "caseoh_bot"}
 
-    # Prepare CSV file
+    # -------------------------------
+    # Initialize CSV file
+    # -------------------------------
     with open('pulse_data.csv', 'w', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(['Minute', 'Buzz', 'Trending', 'Timestamp'])# Header for CSV file
+        writer.writerow(['Minute', 'Buzz', 'Trending', 'Timestamp', 'Status'])# Header for CSV file
 
+    # -------------------------------
+    # Start the keyboard listener
+    # -------------------------------
+    listener = keyboard.Listener(on_press=on_press)
+    listener.start()
+
+    # -------------------------------
+    # Main loop
+    # -------------------------------
     while True:
-        # Listens for data
+        # -------------------------------
+        # Receive and process chat messages
+        # -------------------------------
         response = s.recv(2048).decode("utf-8")
         
         if response.startswith("PING"):
@@ -60,41 +104,55 @@ def main():
             except:
                 username = "unknown"
 
-            if username not in bot_blocklist:    
-                message_count += 1 
+            if not paused:
+                if username not in bot_blocklist:    
+                    message_count += 1 
 
-                # Extract the message text
-                parts = response.split(":", 2)
-                if len(parts) > 2:
-                    message_text = parts[2].lower()
-                    # Clean the text (remove punctuation)
-                    clean_words = re.findall(r'\b\w+\b', message_text)
-                    for word in clean_words:
-                        if word not in stop_words and len(word) > 2:
-                            word_counts[word] += 1
+                    # Extract the message text
+                    parts = response.split(":", 2)
+                    if len(parts) > 2:
+                        message_text = parts[2].lower()
+                        # Clean the text (remove punctuation)
+                        clean_words = re.findall(r'\b\w+\b', message_text)
+                        for word in clean_words:
+                            if word not in stop_words and len(word) > 2:
+                                word_counts[word] += 1
 
-        # Check if 1 min has passed
+        # -------------------------------
+        # Every minute write summary to CSV
+        # -------------------------------
         current_time = time.time()
-        if current_time - last_check_time >= 60:    
+        if current_time - last_check_time >= 60 and not paused:
 
-            # Get the top 5 most used words this minute
+            # Top 5 trending words for this minute
             top_words = [word for word, count in word_counts.most_common(5)]
             trending_str = ",".join(top_words)
 
-            elapsed_seconds = int(current_time - match_start_time)
-            match_minute = elapsed_seconds // 60
+            # Compute elapsed time minus pauses
+            elapsed_seconds = int(current_time - match_start_time - total_pause_duration)
 
-            # Save the "Pulse" to our CSV
+            # Determine minute or paused status
+            if paused:
+                match_minute = "HT"
+                status = "Paused"
+            else:
+                match_minute = elapsed_seconds // 60
+                status = "Live"
+
+            # Append data to CSV
             with open('pulse_data.csv', 'a', newline='') as f:
                 writer = csv.writer(f)
-                writer.writerow([match_minute, message_count, trending_str, current_time])
-            
-            print(f"Minute {match_minute} | Pulse: {message_count} messages/min") 
-            
-            # Reset for the time measurement and reset top words for that minute 
-            message_count = 0
-            last_check_time = current_time
-            word_counts.clear()
+                writer.writerow([match_minute, message_count, trending_str, current_time, status])
 
+            print(f"Minute {match_minute} | Buzz: {message_count} messages/min | Status: {status}")
+
+            # Reset counters for the next minute
+            message_count = 0
+            word_counts.clear()
+            last_check_time = current_time
+
+# -------------------------------
+# Execution
+# -------------------------------
 if __name__ == "__main__":
     main()
