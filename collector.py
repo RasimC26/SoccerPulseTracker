@@ -22,29 +22,34 @@ PASS = os.getenv("TWITCH_TOKEN")
 # Global pause variables and Key press callback
 # -------------------------------
 paused = False
-pause_start_time = 0
-total_pause_duration = 0
+match_phase = 1  # 1 = First Half, 2 = Second Half
+match_start_time = 0
+second_half_start_time = 0
 
 def on_press(key):
-    global paused, pause_start_time, total_pause_duration
+    global paused, match_phase, second_half_start_time
     try:
         if key.char == 'p':
             if not paused:
                 paused = True
-                pause_start_time = time.time()
-                print("MATCH PAUSED")
+                print("HALFTIME / PAUSE TRIGGERED")
             else:
                 paused = False
-                total_pause_duration += time.time() - pause_start_time
-                print("MATCH RESUMED")
+                match_phase = 2
+                second_half_start_time = time.time()
+                print("SECOND HALF RESUMED - Clock set to 46'")
+        elif key.char == 'q':
+            print("GAME OVER")
+            os._exit(0)
     except AttributeError:
-        pass  # ignore special keys
+        pass
 
 # -------------------------------
 # Main Function
 # -------------------------------
 def main():
-
+    global match_start_time
+    
     # -------------------------------
     # Connect to Twitch IRC server
     # -------------------------------
@@ -58,6 +63,8 @@ def main():
     print(f"Connected to {CHAN}. . Ready to track.")
     input("PRESS ENTER WHEN THE GAME STARTS") 
     match_start_time = time.time()
+    last_check_time = match_start_time
+   
 
 
     # -------------------------------
@@ -65,7 +72,6 @@ def main():
     # -------------------------------
     message_count = 0
     word_counts = Counter()
-    last_check_time = match_start_time
 
     # -------------------------------
     # Stop words and bot filter
@@ -122,29 +128,38 @@ def main():
         # Every minute write summary to CSV
         # -------------------------------
         current_time = time.time()
-        if current_time - last_check_time >= 60 and not paused:
+        if not paused and (current_time - last_check_time >= 1):
 
-            # Top 5 trending words for this minute
+            # 1. Determine the "Soccer Minute" string
+            if match_phase == 1:
+                elapsed_min = int((current_time - match_start_time) // 1)
+                if elapsed_min >= 45:
+                    stoppage = elapsed_min - 45
+                    match_minute = f"45+{stoppage}" if stoppage > 0 else "45"
+                else:
+                    match_minute = elapsed_min
+            else:
+                # Starts at 46 and counts up from the moment 'p' was unpaused
+                elapsed_sh = int((current_time - second_half_start_time) // 1)
+                display_min = 46 + elapsed_sh
+                if display_min >= 90:
+                    stoppage = display_min - 90
+                    match_minute = f"90+{stoppage}" if stoppage > 0 else "90"
+                else:
+                    match_minute = display_min
+
+
+            # 2. Get Trending Data
             top_words = [word for word, count in word_counts.most_common(5)]
             trending_str = ",".join(top_words)
 
-            # Compute elapsed time minus pauses
-            elapsed_seconds = int(current_time - match_start_time - total_pause_duration)
 
-            # Determine minute or paused status
-            if paused:
-                match_minute = "HT"
-                status = "Paused"
-            else:
-                match_minute = elapsed_seconds // 60
-                status = "Live"
-
-            # Append data to CSV
+            # 3. Save to CSV
             with open('pulse_data.csv', 'a', newline='') as f:
                 writer = csv.writer(f)
-                writer.writerow([match_minute, message_count, trending_str, current_time, status])
+                writer.writerow([match_minute, message_count, trending_str, current_time, "Live"])
 
-            print(f"Minute {match_minute} | Buzz: {message_count} messages/min | Status: {status}")
+            print(f"Minute {match_minute} | Buzz: {message_count} messages/min | Status: Live")
 
             # Reset counters for the next minute
             message_count = 0
