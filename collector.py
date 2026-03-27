@@ -124,11 +124,21 @@ def main():
                             if word not in stop_words and len(word) > 2:
                                 word_counts[word] += 1
 
+
         # -------------------------------
         # Every minute write summary to CSV
         # -------------------------------
         current_time = time.time()
+
         if not paused and (current_time - last_check_time >= 1):
+
+            # Determine status 
+            status = "First Half"
+
+            if paused:
+                status = "HALFTIME"
+            elif match_phase == 2:
+                status = "Second Half"
 
             # 1. Determine the "Soccer Minute" string
             if match_phase == 1:
@@ -157,9 +167,9 @@ def main():
             # 3. Save to CSV
             with open('pulse_data.csv', 'a', newline='') as f:
                 writer = csv.writer(f)
-                writer.writerow([match_minute, message_count, trending_str, current_time, "Live"])
+                writer.writerow([match_minute, message_count, trending_str, current_time, status])
 
-            print(f"Minute {match_minute} | Buzz: {message_count} messages/min | Status: Live")
+            print(f"Minute {match_minute} | Buzz: {message_count} messages/min | Status: {status}")
 
             # Reset counters for the next minute
             message_count = 0
