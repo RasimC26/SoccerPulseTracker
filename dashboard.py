@@ -23,6 +23,21 @@ def get_real_data():
 df = get_real_data()
 
 # -------------------------------
+# Convert Minute to numeric for proper sorting
+# -------------------------------
+def convert_minute(val):
+    val = str(val)
+    if "+" in val:
+        base, extra = val.split("+")
+        return int(base) + int(extra)   
+    else:
+        return int(val)
+
+if not df.empty:
+    df = df.reset_index(drop=True)
+    df['Minute_numeric'] = np.arange(len(df))
+
+# -------------------------------
 # Page Setup
 # -------------------------------
 st.set_page_config(page_title="Soccer Pulse Tracker", layout="wide")
@@ -102,8 +117,21 @@ if not df.empty and len(df) > 0:
     # Chart Section
     # -------------------------------
     with chart_placeholder.container():
-        fig = px.area(df, x='Minute', y='Buzz', title="Match Momentum Pulse", color_discrete_sequence=['#ff4b4b']) 
-        fig.update_layout(xaxis_title="Match Minute", yaxis_title="Social Volume", xaxis=dict(range=[0, 95]))
+        fig = px.area(df, x='Minute_numeric', y='Buzz', title="Match Momentum Pulse", color_discrete_sequence=['#ff4b4b'])
+
+        if len(df) <= 15:
+            tick_vals = df['Minute_numeric']
+            tick_text = df['Minute']
+        else:
+            tick_vals = [m for m in df['Minute_numeric'] if m % 5 == 0]
+            tick_text = [str(m) for m in tick_vals]
+
+        fig.update_layout(
+            xaxis_title="Match Minute",
+            yaxis_title="Social Volume",
+            xaxis=dict(tickmode='array', tickvals=tick_vals,ticktext=tick_text,tickangle=0, tickfont=dict(size=10), fixedrange=False)
+        )
+
         st.plotly_chart(fig, use_container_width=True)
 
     # -------------------------------
