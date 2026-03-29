@@ -33,12 +33,18 @@ def on_press(key):
             if not paused:
                 paused = True
                 print("HALFTIME / PAUSE TRIGGERED")
+                with open('pulse_data.csv', 'a', newline='') as f:
+                    writer = csv.writer(f)
+                    writer.writerow(['HT', 0, '', time.time(), 'HALFTIME'])
             else:
                 paused = False
                 match_phase = 2
                 second_half_start_time = time.time()
                 print("SECOND HALF RESUMED - Clock set to 46'")
         elif key.char == 'q':
+            with open('pulse_data.csv', 'a', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(['FT', 0, '', time.time(), 'Full Time'])
             print("GAME OVER")
             os._exit(0)
     except AttributeError:
@@ -133,12 +139,12 @@ def main():
         if not paused and (current_time - last_check_time >= 1):
 
             # Determine status 
-            status = "First Half"
-
             if paused:
                 status = "HALFTIME"
             elif match_phase == 2:
                 status = "Second Half"
+            else:
+                status = "First Half"
 
             # 1. Determine the "Soccer Minute" string
             if match_phase == 1:

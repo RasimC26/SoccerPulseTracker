@@ -30,43 +30,6 @@ df = get_real_data()
 st.set_page_config(page_title="Soccer Pulse Tracker", layout="wide")
 st.title("Live Match Pulse Tracker")
 
-# -------------------------------
-# Countdown Timer (JS), ONLY if data exists
-# -------------------------------
-if not df.empty and len(df) > 0:
-    last_update_time = float(df['Timestamp'].iloc[-1])
-    components.html(f"""
-<div id="countdown" style="font-family: 'Source Sans Pro', sans-serif; font-size:25px; font-weight:700; color:white;">
-Refreshing in ...
-</div>
-
-<script>
-const lastUpdate = {last_update_time};
-let isReloading = false;
-
-function updateTimer() {{
-    if (isReloading) return;
-
-    const now = Date.now() / 1000;
-    const elapsed = now - lastUpdate;
-    const remaining = Math.max(0, 60 - Math.floor(elapsed));
-
-    document.getElementById("countdown").innerHTML =
-        "Next Refresh in <b>" + remaining + "s</b>";
-
-    if (remaining <= 0 && !isReloading) {{
-        isReloading = true;
-        document.getElementById("countdown").innerHTML = "<b>Syncing Data...</b>";
-        setTimeout(() => {{
-            window.parent.location.reload();
-        }}, 2000); // small delay to show "Syncing Data..."
-    }}
-}}
-
-setInterval(updateTimer, 1000);
-updateTimer();
-</script>
-""", height=40)
 
 # -------------------------------
 # Placeholders for dynamic content
@@ -83,6 +46,15 @@ if not df.empty and len(df) > 0:
     # Get latest values
     current_minute = df['Minute'].iloc[-1]
     current_buzz = df['Buzz'].iloc[-1]
+    latest_status = df['Status'].iloc[-1]
+
+    if latest_status == "HALFTIME":
+        st.info("⏸ Halftime")
+        st.stop()
+
+    if latest_status == "Full Time":
+        st.success("🏁 Full Time")
+        st.stop()
 
     # Process Trending Words
     raw_trending = df['Trending'].iloc[-1]
@@ -90,6 +62,7 @@ if not df.empty and len(df) > 0:
         trending_list = ["Waiting..."]
     else:
         trending_list = str(raw_trending).split(",")
+
 
     # -------------------------------
     # Metrics Section
@@ -99,6 +72,43 @@ if not df.empty and len(df) > 0:
         delta_val = int(current_buzz - df['Buzz'].iloc[-2]) if len(df) > 1 else 0
         m_col1.metric("Match Minute", f"{current_minute}'")
         m_col2.metric("Latest Buzz Score", current_buzz, delta=delta_val)
+
+        # -------------------------------
+        # Countdown Timer
+        # -------------------------------
+        last_update_time = float(df['Timestamp'].iloc[-1])
+        components.html(f"""
+            <div id="countdown" style="font-family: 'Source Sans Pro', sans-serif; font-size:25px; font-weight:700; color:white;">
+            Refreshing in ...
+            </div>
+p
+            <script>
+            const lastUpdate = {last_update_time};
+            let isReloading = false;
+
+            function updateTimer() {{
+                if (isReloading) return;
+
+                const now = Date.now() / 1000;
+                const elapsed = now - lastUpdate;
+                const remaining = Math.max(0, 60 - Math.floor(elapsed));
+
+                document.getElementById("countdown").innerHTML =
+                    "Next Refresh in <b>" + remaining + "s</b>";
+
+                if (remaining <= 0 && !isReloading) {{
+                    isReloading = true;
+                    document.getElementById("countdown").innerHTML = "<b>Syncing Data...</b>";
+                    setTimeout(() => {{
+                        window.parent.location.reload();
+                    }}, 2000); // small delay to show "Syncing Data..."
+                }}
+            }}
+
+            setInterval(updateTimer, 1000);
+            updateTimer();
+            </script>
+            """, height=40)
 
     # -------------------------------
     # Chart Section
